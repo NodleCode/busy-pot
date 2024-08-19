@@ -5,7 +5,8 @@
 //! Nodle specific configuration
 
 use scale_info::PortableRegistry;
-use subxt::client::OfflineClientT;
+use subxt::client::ClientState;
+use subxt::config::signed_extensions::CheckMetadataHash;
 use subxt::config::{
     signed_extensions, Config, ExtrinsicParams, ExtrinsicParamsEncoder, ExtrinsicParamsError,
     Header, SignedExtension, SubstrateConfig,
@@ -22,14 +23,27 @@ impl<T: Config> SignedExtension<T> for CheckWeight {
 impl<T: Config> ExtrinsicParams<T> for CheckWeight {
     type Params = ();
 
-    fn new<Client: OfflineClientT<T>>(
-        _client: Client,
-        _other_params: Self::Params,
-    ) -> Result<Self, ExtrinsicParamsError> {
+    fn new(_client: &ClientState<T>, _params: Self::Params) -> Result<Self, ExtrinsicParamsError> {
         Ok(CheckWeight)
     }
 }
 impl ExtrinsicParamsEncoder for CheckWeight {}
+
+pub struct StorageWeightReclaim;
+impl<T: Config> SignedExtension<T> for StorageWeightReclaim {
+    type Decoded = ();
+    fn matches(identifier: &str, _type_id: u32, _types: &PortableRegistry) -> bool {
+        identifier == "StorageWeightReclaim"
+    }
+}
+impl<T: Config> ExtrinsicParams<T> for StorageWeightReclaim {
+    type Params = ();
+
+    fn new(_client: &ClientState<T>, _params: Self::Params) -> Result<Self, ExtrinsicParamsError> {
+        Ok(StorageWeightReclaim)
+    }
+}
+impl ExtrinsicParamsEncoder for StorageWeightReclaim {}
 
 pub struct ChargeSponsor;
 impl<T: Config> SignedExtension<T> for ChargeSponsor {
@@ -41,10 +55,7 @@ impl<T: Config> SignedExtension<T> for ChargeSponsor {
 impl<T: Config> ExtrinsicParams<T> for ChargeSponsor {
     type Params = ();
 
-    fn new<Client: OfflineClientT<T>>(
-        _client: Client,
-        _other_params: Self::Params,
-    ) -> Result<Self, ExtrinsicParamsError> {
+    fn new(_client: &ClientState<T>, _params: Self::Params) -> Result<Self, ExtrinsicParamsError> {
         Ok(ChargeSponsor)
     }
 }
@@ -63,6 +74,8 @@ pub type NodleExtrinsicParams<T> = signed_extensions::AnyOf<
         CheckWeight,
         signed_extensions::ChargeTransactionPayment,
         ChargeSponsor,
+        StorageWeightReclaim,
+        CheckMetadataHash,
     ),
 >;
 
@@ -159,6 +172,8 @@ impl<T: Config> NodleExtrinsicParamsBuilder<T> {
             signed_extensions::CheckNonceParams(self.nonce),
             (),
             charge_transaction_params,
+            (),
+            (),
             (),
         )
     }
