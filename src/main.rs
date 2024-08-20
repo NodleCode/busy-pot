@@ -110,29 +110,26 @@ use eden::runtime_types::{
     pallet_xcm::pallet::Call::send,
     runtime_eden::{pallets_util::SponsorshipType, RuntimeCall},
     sp_weights::weight_v2::Weight,
+    staging_xcm::v4::{
+        asset::{Asset, AssetFilter, AssetId, Assets, Fungibility, WildAsset},
+        junction::Junction,
+        junctions::Junctions,
+        location::Location,
+        Instruction::{BuyExecution, DepositAsset, RefundSurplus, Transact, WithdrawAsset},
+        Xcm,
+    },
     xcm::{
-        double_encoded::DoubleEncoded,
-        v2::OriginKind,
-        v3::{
-            junction::Junction,
-            junctions::Junctions,
-            multiasset::{
-                AssetId, Fungibility, MultiAsset, MultiAssetFilter, MultiAssets, WildMultiAsset,
-            },
-            multilocation::MultiLocation,
-            Instruction::{BuyExecution, DepositAsset, RefundSurplus, Transact, WithdrawAsset},
-            WeightLimit, Xcm,
-        },
-        VersionedMultiLocation, VersionedXcm,
+        double_encoded::DoubleEncoded, v3::OriginKind, v3::WeightLimit, VersionedLocation,
+        VersionedXcm,
     },
 };
 
 const DOT_DECIMALS: u128 = 10_000_000_000; // 10 decimals
 const NODL_DECIMALS: u128 = 100_000_000_000; // 11 decimals
 
-fn build_fee_asset(amount: u128) -> MultiAsset {
-    MultiAsset {
-        id: AssetId::Concrete(MultiLocation {
+fn build_fee_asset(amount: u128) -> Asset {
+    Asset {
+        id: AssetId(Location {
             parents: 0,
             interior: Junctions::Here,
         }),
@@ -163,7 +160,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let fee_limit = (fee_limit * DOT_DECIMALS as f32) as u128;
             println!("fee_limit set to: {}", fee_limit);
 
-            let withdraw_asset = WithdrawAsset(MultiAssets(vec![build_fee_asset(fee_limit)]));
+            let withdraw_asset = WithdrawAsset(Assets(vec![build_fee_asset(fee_limit)]));
 
             let buy_execution = BuyExecution {
                 fees: build_fee_asset(fee_limit),
@@ -185,19 +182,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let refund_surplus = RefundSurplus;
 
             let deposit_asset = DepositAsset {
-                assets: MultiAssetFilter::Wild(WildMultiAsset::All),
-                beneficiary: MultiLocation {
+                assets: AssetFilter::Wild(WildAsset::All),
+                beneficiary: Location {
                     parents: 0,
-                    interior: Junctions::X1(Junction::Parachain(2026)),
+                    interior: Junctions::X1([Junction::Parachain(2026)]),
                 },
             };
 
-            let dest = VersionedMultiLocation::V3(MultiLocation {
+            let dest = VersionedLocation::V4(Location {
                 parents: 1,
                 interior: Junctions::Here,
             });
 
-            let message = VersionedXcm::V3(Xcm(vec![
+            let message = VersionedXcm::V4(Xcm(vec![
                 withdraw_asset,
                 buy_execution,
                 transact,
